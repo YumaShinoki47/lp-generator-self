@@ -71,7 +71,7 @@ const formSchema = z.object({
     message: "特徴は10文字以上入力してください。",
   }),
   testimonials: z.string().min(10, {
-    message: "お客様の声は10文字以上入力してください。",
+    message: "その他含めたい内容は10文字以上入力してください。",
   }),
   companyName: z.string().min(2, {
     message: "会社名は2文字以上入力してください。",
@@ -396,11 +396,11 @@ const App = () => {
                             render={({ field }) => (
                               <FormItem>
                                 <FormLabel>
-                                  お客様の声 <span className="text-destructive">*</span>
+                                  その他含めたい内容 <span className="text-destructive">*</span>
                                 </FormLabel>
                                 <FormControl>
                                   <Textarea
-                                    placeholder="講師情報、お客様の声"
+                                    placeholder="講師情報、お客様の声、会社概要など"
                                     rows={3}
                                     {...field}
                                   />
