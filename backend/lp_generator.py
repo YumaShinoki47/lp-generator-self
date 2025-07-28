@@ -17,8 +17,6 @@ load_dotenv()
 ######################################
 
 ## geminiを使う場合
-from google import genai as genai_img
-from google.genai import types
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
 generation_config = {
     "temperature": 1,
@@ -133,7 +131,7 @@ def save_to_file(html_content, file_name):
 @ray.remote
 def generate_image_by_imagen3(prompt, file_name, aspect_ratio=None):
     # APIクライアントの初期化
-    client = genai_img.Client(api_key=os.environ.get("GOOGLE_IMAGEN_API_KEY"))
+    client = genai.Client(api_key=os.environ.get("GOOGLE_IMAGEN_API_KEY"))
     
     # ファイル名に基づいてアスペクト比を決定
     if aspect_ratio is None:
@@ -145,7 +143,7 @@ def generate_image_by_imagen3(prompt, file_name, aspect_ratio=None):
             aspect_ratio = '1:1'  # デフォルト値
 
     # 生成設定
-    config = types.GenerateImagesConfig(
+    config = genai.types.GenerateImagesConfig(
         number_of_images=1,
         aspect_ratio=aspect_ratio,
         personGeneration = "ALLOW_ADULT"

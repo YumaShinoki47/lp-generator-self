@@ -1,4 +1,4 @@
-import { LPGenerationData, JobStatus } from "@/types";
+import { LPGenerationData, JobStatus } from "@/types/types";
 
 // APIの基本URL
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000/api";
