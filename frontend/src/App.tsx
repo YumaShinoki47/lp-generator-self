@@ -193,46 +193,61 @@ const App = () => {
         ],
       });
 
-      // ジョブステータスのポーリングを開始
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusResponse = await fetch(`http://localhost:8000/api/jobs/${jobId}`);
-          if (!statusResponse.ok) {
-            throw new Error("ジョブステータスの取得に失敗しました");
-          }
-
-          const jobStatus = await statusResponse.json();
-          setJobInfo(jobStatus);
-
-          // ジョブが完了またはエラーの場合、ポーリングを停止
-          if (jobStatus.status === "completed" || jobStatus.status === "error") {
-            clearInterval(pollInterval);
-
-            // 完了時にプレビューを更新
-            if (jobStatus.status === "completed" && jobStatus.result && iframeRef.current) {
-              updateIframeContent(
-                iframeRef.current,
-                jobStatus.result.html,
-                jobStatus.result.css,
-                jobStatus.result.js,
-                jobStatus.result.imageBase64
-              );
+      // ジョブステータスのポーリングを開始（動的間隔）
+      const startPolling = (jobId: string) => {
+        const poll = async () => {
+          try {
+            const statusResponse = await fetch(`http://localhost:8000/api/jobs/${jobId}`);
+            if (!statusResponse.ok) {
+              throw new Error("ジョブステータスの取得に失敗しました");
             }
+
+            const jobStatus = await statusResponse.json();
+            setJobInfo(jobStatus);
+
+            // ジョブが完了またはエラーの場合、ポーリングを停止
+            if (jobStatus.status === "completed" || jobStatus.status === "error") {
+              // 完了時にプレビューを更新
+              if (jobStatus.status === "completed" && jobStatus.result && iframeRef.current) {
+                updateIframeContent(
+                  iframeRef.current,
+                  jobStatus.result.html,
+                  jobStatus.result.css,
+                  jobStatus.result.js,
+                  jobStatus.result.imageBase64
+                );
+              }
+              return; // ポーリング停止
+            }
+
+            // ジョブステータスに基づく動的ポーリング間隔
+            const getPollingInterval = (status: string) => {
+              switch (status) {
+                case "processing": return 1000; // 処理中は1秒間隔（高頻度更新）
+                case "pending": return 5000;    // 待機中は5秒間隔（負荷軽減）
+                default: return 3000;           // デフォルト3秒間隔
+              }
+            };
+
+            setTimeout(poll, getPollingInterval(jobStatus.status));
+          } catch (error) {
+            console.error("Error polling job status:", error);
+            setJobInfo((prev: JobInfo | null) =>
+              prev
+                ? {
+                    ...prev,
+                    status: "error",
+                    error: "ジョブステータスの取得に失敗しました",
+                  }
+                : null
+            );
           }
-        } catch (error) {
-          console.error("Error polling job status:", error);
-          clearInterval(pollInterval);
-          setJobInfo((prev) =>
-            prev
-              ? {
-                  ...prev,
-                  status: "error",
-                  error: "ジョブステータスの取得に失敗しました",
-                }
-              : null
-          );
-        }
-      }, 3000); // 3秒ごとにポーリング
+        };
+
+        poll();
+      };
+
+      startPolling(jobId);
     } catch (error) {
       console.error("Error starting job:", error);
       setJobInfo({
