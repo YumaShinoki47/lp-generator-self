@@ -204,18 +204,27 @@ async def generate_lp_background(job_id: str, data: LPGenerationRequest):
             final_js = f.read()
             
         # 画像をBase64エンコード
-        image_base64 = ""
-        image_files = ["placeholder_css_1.png", "placeholder_css_1.jpg", "placeholder_html_1.png"]
+        image_base64_map = {}
         
-        for image_file_name in image_files:
+        # 生成された全てのPNGファイルを取得
+        import glob
+        png_files = glob.glob("placeholder_*.png")
+        
+        for image_file_name in png_files:
             try:
                 with open(image_file_name, "rb") as image_file:
-                    image_base64 = base64.b64encode(image_file.read()).decode('utf-8')
+                    image_data = base64.b64encode(image_file.read()).decode('utf-8')
+                    image_base64_map[image_file_name] = f"data:image/png;base64,{image_data}"
                     print(f"画像を読み込みました: {image_file_name}")
-                    break
             except Exception as e:
                 print(f"画像エンコード中にエラー ({image_file_name}): {e}")
                 continue
+        
+        image_base64 = ""
+        if "placeholder_css_1.png" in image_base64_map:
+            image_base64 = image_base64_map["placeholder_css_1.png"].replace("data:image/png;base64,", "")
+        elif image_base64_map:
+            image_base64 = list(image_base64_map.values())[0].replace("data:image/png;base64,", "")
             
         # 結果を作成
         result = {
@@ -223,7 +232,8 @@ async def generate_lp_background(job_id: str, data: LPGenerationRequest):
             "html": final_html,
             "css": final_css,
             "js": final_js,
-            "imageBase64": f"data:image/jpeg;base64,{image_base64}" if image_base64 else "",
+            "imageBase64": f"data:image/png;base64,{image_base64}" if image_base64 else "",
+            "imageBase64Map": image_base64_map,
             "createdAt": datetime.now().isoformat(),
         }
         
