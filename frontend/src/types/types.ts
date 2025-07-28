@@ -30,5 +30,7 @@ export interface JobStatus {
     css: string;
     js: string;
     imageUrls: string[];
+    imageBase64: string;
+    imageBase64Map: Record<string, string>;
   };
 }

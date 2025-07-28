@@ -53,6 +53,7 @@ interface JobInfo {
     js: string;
     imageUrls: string[];
     imageBase64: string;
+    imageBase64Map: Record<string, string>;
   };
 }
 
@@ -87,13 +88,20 @@ const updateIframeContent = (
   html: string,
   css: string,
   js: string,
-  imageBase64: string
+  imageBase64: string,
+  imageBase64Map: Record<string, string> = {}
 ) => {
   const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
 
   if (iframeDoc) {
     // CSSの中の${imageBase64}プレースホルダーを実際の画像データで置き換え
-    const updatedCss = css.replace("${imageBase64}", imageBase64);
+    let updatedCss = css.replace("${imageBase64}", imageBase64);
+    
+    let updatedHtml = html;
+    Object.entries(imageBase64Map).forEach(([filename, base64Data]) => {
+      const regex = new RegExp(`src="${filename}"`, 'g');
+      updatedHtml = updatedHtml.replace(regex, `src="${base64Data}"`);
+    });
 
     iframeDoc.open();
     iframeDoc.write(`
@@ -103,7 +111,7 @@ const updateIframeContent = (
           <style>${updatedCss}</style>
         </head>
         <body>
-          ${html}
+          ${updatedHtml}
           <script>${js}</script>
         </body>
       </html>
@@ -215,7 +223,8 @@ const App = () => {
                 jobStatus.result.html,
                 jobStatus.result.css,
                 jobStatus.result.js,
-                jobStatus.result.imageBase64
+                jobStatus.result.imageBase64,
+                jobStatus.result.imageBase64Map
               );
             }
           }
@@ -283,7 +292,8 @@ const App = () => {
         jobInfo.result.html,
         jobInfo.result.css,
         jobInfo.result.js,
-        jobInfo.result.imageBase64
+        jobInfo.result.imageBase64,
+        jobInfo.result.imageBase64Map
       );
     }
   }, [jobInfo?.result, jobInfo?.status]);
