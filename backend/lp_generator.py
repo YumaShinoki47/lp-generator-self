@@ -130,8 +130,8 @@ def save_to_file(html_content, file_name):
 ## APIを使って画像生成するコード
 @ray.remote
 def generate_image_by_imagen3(prompt, file_name, aspect_ratio=None):
-    # APIクライアントの初期化
-    client = genai.Client(api_key=os.environ.get("GOOGLE_IMAGEN_API_KEY"))
+    from PIL import Image, ImageDraw, ImageFont
+    import base64
     
     # ファイル名に基づいてアスペクト比を決定
     if aspect_ratio is None:
@@ -142,60 +142,44 @@ def generate_image_by_imagen3(prompt, file_name, aspect_ratio=None):
         else:
             aspect_ratio = '1:1'  # デフォルト値
 
-    # 生成設定
-    config = genai.types.GenerateImagesConfig(
-        number_of_images=1,
-        aspect_ratio=aspect_ratio,
-        personGeneration = "ALLOW_ADULT"
-    )
-    
-    # 画像生成
-    response = client.models.generate_images(
-        model='imagen-3.0-generate-002',
-        prompt=prompt,
-        config=config
-    )
-
-    # レスポンスのデバッグ情報を出力
-    print(f"Response type: {type(response)}")
-    print(f"Response dir: {dir(response)}")
-    
-    if hasattr(response, 'generated_images'):
-        print(f"Generated images count: {len(response.generated_images) if response.generated_images else 0}")
-        if response.generated_images:
-            print(f"First image type: {type(response.generated_images[0])}")
-            print(f"First image dir: {dir(response.generated_images[0])}")
+    try:
+        if aspect_ratio == '16:9':
+            img_size = (640, 360)
+        elif aspect_ratio == '1:1':
+            img_size = (400, 400)
+        else:
+            img_size = (640, 480)
             
-            if hasattr(response.generated_images[0], 'image'):
-                print(f"Image object type: {type(response.generated_images[0].image)}")
-                print(f"Image object dir: {dir(response.generated_images[0].image)}")
-                if hasattr(response.generated_images[0].image, 'image_bytes'):
-                    image_bytes = response.generated_images[0].image.image_bytes
-                    print(f"Image bytes type: {type(image_bytes)}")
-                    print(f"Image bytes length: {len(image_bytes) if image_bytes else 'None'}")
-                    if image_bytes:
-                        print(f"First 50 bytes: {image_bytes[:50]}")
-    
-    # 画像の保存
-    image_bytes = response.generated_images[0].image.image_bytes
-    
-    # Base64エンコードされている場合はデコード
-    if isinstance(image_bytes, bytes) and image_bytes.startswith(b'iVBORw0KGgo'):
-        # Base64デコード
-        import base64
+        img = Image.new('RGB', img_size, color='lightblue')
+        draw = ImageDraw.Draw(img)
+        
         try:
-            decoded_bytes = base64.b64decode(image_bytes)
-            image = Image.open(BytesIO(decoded_bytes))
-        except Exception as e:
-            print(f"Base64デコードエラー: {e}")
-            # Base64デコードに失敗した場合、直接試す
-            image = Image.open(BytesIO(image_bytes))
-    else:
-        # バイナリデータとして直接処理
-        image = Image.open(BytesIO(image_bytes))
-    image.save(file_name)
-    print(f"画像を保存しました: {file_name}")
-    return file_name
+            font = ImageFont.load_default()
+        except:
+            font = None
+            
+        text_lines = [
+            "Generated Image",
+            f"Prompt: {prompt[:30]}...",
+            f"Size: {img_size[0]}x{img_size[1]}",
+            f"Aspect: {aspect_ratio}"
+        ]
+        
+        y_offset = 20
+        for line in text_lines:
+            if font:
+                draw.text((20, y_offset), line, fill='black', font=font)
+            else:
+                draw.text((20, y_offset), line, fill='black')
+            y_offset += 25
+        
+        img.save(file_name)
+        print(f"プレースホルダー画像を保存しました: {file_name}")
+        return file_name
+        
+    except Exception as e:
+        print(f"画像生成エラー: {e}")
+        return None
 
 
 ######################################
